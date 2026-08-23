@@ -120,7 +120,7 @@ rss:
 
     - id: "sostav"
       name: "Sostav (маркетинг/реклама)"
-      url: "https://www.sostav.ru/rss/news.xml"
+      url: "https://www.sostav.ru/rss/"
 
     - id: "techcrunch-ai"
       name: "TechCrunch AI"
@@ -151,13 +151,14 @@ rss:
       name: "VentureBeat AI"
       url: "https://venturebeat.com/category/ai/feed/"
 
-    - id: "marktechpost"
-      name: "MarkTechPost (обзоры моделей)"
-      url: "https://www.marktechpost.com/feed/"
 
-    - id: "reddit-localllama"
-      name: "r/LocalLLaMA (обзоры моделей)"
-      url: "https://www.reddit.com/r/LocalLLaMA/.rss"
+    - id: "google-ai-blog"
+      name: "Google AI Blog (Gemini, исследования)"
+      url: "https://blog.google/technology/ai/rss/"
+
+    - id: "zdnet-ai"
+      name: "ZDNet AI (обзоры и практика)"
+      url: "https://www.zdnet.com/topic/artificial-intelligence/rss.xml"
 
 
 # ===============================================================
