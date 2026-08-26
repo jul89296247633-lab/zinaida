@@ -1142,6 +1142,17 @@ class NewsAnalyzer:
             if all_data:
                 raw_rss_items = self._convert_rss_items_to_list(all_data.items, all_data.id_to_name)
 
+        # Ленты standalone-блока показываются целиком отдельно — из ключевой
+        # фильтрации их убираем, чтобы не дублировать и не раздувать дайджест
+        _sa_feed_ids = set(
+            ((self.ctx.config.get("DISPLAY", {}) or {}).get("STANDALONE", {}) or {}).get("RSS_FEEDS", []) or []
+        )
+
+        def _stats_filter(items):
+            if not _sa_feed_ids or not items:
+                return items
+            return [i for i in items if i.get("feed_id") not in _sa_feed_ids]
+
         # 如果 RSS 展示未启用，跳过关键词分析，只返回原始条目用于独立展示区
         if not rss_display_enabled:
             return None, None, raw_rss_items, rss_new_urls
@@ -1164,7 +1175,7 @@ class NewsAnalyzer:
                 return None, None, raw_rss_items, rss_new_urls
 
             rss_stats, total = count_rss_frequency(
-                rss_items=new_items_list,
+                rss_items=_stats_filter(new_items_list),
                 word_groups=word_groups,
                 filter_words=filter_words,
                 global_filters=global_filters,
@@ -1188,7 +1199,7 @@ class NewsAnalyzer:
                 return None, None, None, rss_new_urls
 
             rss_stats, total = count_rss_frequency(
-                rss_items=raw_rss_items,
+                rss_items=_stats_filter(raw_rss_items),
                 word_groups=word_groups,
                 filter_words=filter_words,
                 global_filters=global_filters,
@@ -1207,7 +1218,7 @@ class NewsAnalyzer:
             # 生成新增统计
             if new_items_list:
                 rss_new_stats, _ = count_rss_frequency(
-                    rss_items=new_items_list,
+                    rss_items=_stats_filter(new_items_list),
                     word_groups=word_groups,
                     filter_words=filter_words,
                     global_filters=global_filters,
@@ -1227,7 +1238,7 @@ class NewsAnalyzer:
                 return None, None, None, rss_new_urls
 
             rss_stats, total = count_rss_frequency(
-                rss_items=raw_rss_items,
+                rss_items=_stats_filter(raw_rss_items),
                 word_groups=word_groups,
                 filter_words=filter_words,
                 global_filters=global_filters,
@@ -1246,7 +1257,7 @@ class NewsAnalyzer:
             # 生成新增统计
             if new_items_list:
                 rss_new_stats, _ = count_rss_frequency(
-                    rss_items=new_items_list,
+                    rss_items=_stats_filter(new_items_list),
                     word_groups=word_groups,
                     filter_words=filter_words,
                     global_filters=global_filters,
