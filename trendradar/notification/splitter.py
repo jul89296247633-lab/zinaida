@@ -8,7 +8,7 @@
 from datetime import datetime
 from typing import Dict, List, Optional, Callable
 
-from trendradar.report.formatter import format_title_for_platform
+from trendradar.report.formatter import format_title_for_platform, clean_excerpt
 from trendradar.report.helpers import format_rank_display
 from trendradar.utils.time import DEFAULT_TIMEZONE, format_iso_time_friendly, convert_time_for_display
 from trendradar.notification.batch import truncate_at_line_boundary
@@ -1530,29 +1530,29 @@ def _process_standalone_section(
     if add_separator and current_batch_has_content:
         # 需要添加分割线
         if format_type == "feishu":
-            section_header = f"\n{feishu_separator}\n\n📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"\n{feishu_separator}\n\n🛠 **Проекты дня** (всего {total_items})\n\n"
         elif format_type == "dingtalk":
-            section_header = f"\n---\n\n📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"\n---\n\n🛠 **Проекты дня** (всего {total_items})\n\n"
         elif format_type in ("wework", "bark"):
-            section_header = f"\n\n\n\n📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"\n\n\n\n🛠 **Проекты дня** (всего {total_items})\n\n"
         elif format_type == "telegram":
-            section_header = f"\n\n📋 Отдельный блок (всего {total_items})\n\n"
+            section_header = f"\n\n🛠 Проекты дня (всего {total_items})\n\n"
         elif format_type == "slack":
-            section_header = f"\n\n📋 *Отдельный блок* (всего {total_items})\n\n"
+            section_header = f"\n\n🛠 *Проекты дня* (всего {total_items})\n\n"
         else:
-            section_header = f"\n\n📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"\n\n🛠 **Проекты дня** (всего {total_items})\n\n"
     else:
         # 不需要分割线 (第一个区域)
         if format_type == "feishu":
-            section_header = f"📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"🛠 **Проекты дня** (всего {total_items})\n\n"
         elif format_type == "dingtalk":
-            section_header = f"📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"🛠 **Проекты дня** (всего {total_items})\n\n"
         elif format_type == "telegram":
-            section_header = f"📋 Отдельный блок (всего {total_items})\n\n"
+            section_header = f"🛠 Проекты дня (всего {total_items})\n\n"
         elif format_type == "slack":
-            section_header = f"📋 *Отдельный блок* (всего {total_items})\n\n"
+            section_header = f"🛠 *Проекты дня* (всего {total_items})\n\n"
         else:
-            section_header = f"📋 **Отдельный блок** (всего {total_items})\n\n"
+            section_header = f"🛠 **Проекты дня** (всего {total_items})\n\n"
 
     # 添加区块标题
     test_content = current_batch + section_header
@@ -1577,17 +1577,17 @@ def _process_standalone_section(
         # 平台标题
         platform_header = ""
         if format_type in ("wework", "bark"):
-            platform_header = f"**{platform_name}** ({len(items)} ):\n\n"
+            platform_header = f"**{platform_name}** ({len(items)}):\n\n"
         elif format_type == "telegram":
-            platform_header = f"{platform_name} ({len(items)} ):\n\n"
+            platform_header = f"{platform_name} ({len(items)}):\n\n"
         elif format_type == "ntfy":
-            platform_header = f"**{platform_name}** ({len(items)} ):\n\n"
+            platform_header = f"**{platform_name}** ({len(items)}):\n\n"
         elif format_type == "feishu":
-            platform_header = f"**{platform_name}** ({len(items)} ):\n\n"
+            platform_header = f"**{platform_name}** ({len(items)}):\n\n"
         elif format_type == "dingtalk":
-            platform_header = f"**{platform_name}** ({len(items)} ):\n\n"
+            platform_header = f"**{platform_name}** ({len(items)}):\n\n"
         elif format_type == "slack":
-            platform_header = f"*{platform_name}* ({len(items)} ):\n\n"
+            platform_header = f"*{platform_name}* ({len(items)}):\n\n"
 
         # 构建第一新闻
         first_item_line = ""
@@ -1641,17 +1641,17 @@ def _process_standalone_section(
         # RSS 源标题
         feed_header = ""
         if format_type in ("wework", "bark"):
-            feed_header = f"**{feed_name}** ({len(items)} ):\n\n"
+            feed_header = f"**{feed_name}** ({len(items)}):\n\n"
         elif format_type == "telegram":
-            feed_header = f"{feed_name} ({len(items)} ):\n\n"
+            feed_header = f"{feed_name} ({len(items)}):\n\n"
         elif format_type == "ntfy":
-            feed_header = f"**{feed_name}** ({len(items)} ):\n\n"
+            feed_header = f"**{feed_name}** ({len(items)}):\n\n"
         elif format_type == "feishu":
-            feed_header = f"**{feed_name}** ({len(items)} ):\n\n"
+            feed_header = f"**{feed_name}** ({len(items)}):\n\n"
         elif format_type == "dingtalk":
-            feed_header = f"**{feed_name}** ({len(items)} ):\n\n"
+            feed_header = f"**{feed_name}** ({len(items)}):\n\n"
         elif format_type == "slack":
-            feed_header = f"*{feed_name}* ({len(items)} ):\n\n"
+            feed_header = f"*{feed_name}* ({len(items)}):\n\n"
 
         # 构建第一 RSS
         first_item_line = ""
@@ -1845,12 +1845,15 @@ def _format_standalone_rss_item(
         if meta_str:
             item_line += f" <font color='grey'>- {meta_str}</font>"
     elif format_type == "telegram":
+        from html import escape as _esc
+        item_line = f"  {index}. <b>{_esc(title)}</b>"
+        excerpt = clean_excerpt(item.get("summary", ""))
+        if excerpt:
+            item_line += f"\n     <i>{_esc(excerpt)}</i>"
         if url:
-            item_line = f"  {index}. {title} ({url})"
-        else:
-            item_line = f"  {index}. {title}"
+            item_line += f"\n     🔗 {url}"
         if meta_str:
-            item_line += f" - {meta_str}"
+            item_line += f"\n     <code>{meta_str}</code>"
     elif format_type == "slack":
         if url:
             item_line = f"  {index}. <{url}|{title}>"

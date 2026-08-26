@@ -627,6 +627,7 @@ class NewsAnalyzer:
                         "url": item.get("url", ""),
                         "published_at": item.get("published_at", ""),
                         "author": item.get("author", ""),
+                        "summary": item.get("summary", ""),
                     })
 
             # 限制条数并添加到结果

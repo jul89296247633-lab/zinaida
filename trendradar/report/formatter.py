@@ -10,6 +10,22 @@ from typing import Dict
 from trendradar.report.helpers import clean_title, html_escape, format_rank_display
 
 
+
+def clean_excerpt(summary, limit=220):
+    """Очистить HTML и обрезать текст до короткой выжимки."""
+    if not summary:
+        return ""
+    import re as _re, html as _html
+    text = _re.sub(r"<[^>]+>", " ", str(summary))
+    text = _html.unescape(text)
+    text = _re.sub(r"\s+", " ", text).strip()
+    if len(text) > limit:
+        cut = text[:limit]
+        if " " in cut:
+            cut = cut.rsplit(" ", 1)[0]
+        text = cut + "…"
+    return text
+
 def format_title_for_platform(
     platform: str, title_data: Dict, show_source: bool = True, show_keyword: bool = False
 ) -> str:
@@ -151,6 +167,9 @@ def format_title_for_platform(
             result += f" <code>- {title_data['time_display']}</code>"
         if title_data["count"] > 1:
             result += f" <code>({title_data['count']} раз)</code>"
+        excerpt = clean_excerpt(title_data.get("summary", ""))
+        if excerpt:
+            result += f"\n     <i>{html_escape(excerpt)}</i>"
 
         return result
 

@@ -160,6 +160,10 @@ rss:
       name: "ZDNet AI (обзоры и практика)"
       url: "https://www.zdnet.com/topic/artificial-intelligence/rss.xml"
 
+    - id: "github-trending"
+      name: "GitHub Trending — проекты дня"
+      url: "https://mshibanami.github.io/GitHubTrendingRSS/daily/all.xml"
+
 
 # ===============================================================
 # 4. 报告模式
@@ -251,15 +255,15 @@ display:
                                       # 注：热点词汇统计中的新增标记🆕不受此配置影响
 
     rss: true                         # RSS 订阅区域（true=显示并分析, false=隐藏并跳过分析）
-    standalone: false                 # 独立展示区：完整热榜/RSS，不受关键词过滤（true=显示, false=隐藏）
+    standalone: true                 # 独立展示区：完整热榜/RSS，不受关键词过滤（true=显示, false=隐藏）
     ai_analysis: false                 # AI 分析区域（true=显示, false=隐藏）
 
   # 独立展示区：将指定平台/RSS 完整展示，不受关键词过滤
   # 推送展示由 regions.standalone 控制，AI 分析由 ai_analysis.include_standalone 控制
   standalone:
     platforms: []     # 热榜平台 ID 列表（如 ["zhihu", "weibo"]）
-    rss_feeds: []                                # RSS 源 ID 列表（如 ["hacker-news"]）
-    max_items: 20                                # 每个源最多展示条数（0=不限制）
+    rss_feeds: ["github-trending"]   # проекты дня, без фильтра                                # RSS 源 ID 列表（如 ["hacker-news"]）
+    max_items: 4                                # 每个源最多展示条数（0=不限制）
 
 
 # ===============================================================
