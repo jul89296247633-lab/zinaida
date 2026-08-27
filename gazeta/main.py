@@ -181,24 +181,42 @@ def call_editor(material_text, today_label):
             {"role": "user", "content": user},
         ],
         "temperature": 0.6,
-        "max_tokens": 12000,
+        "max_tokens": 10000,
+        "stream": True,
     }
     last_err = None
     for attempt in range(3):
         try:
             r = requests.post(url, headers={"Authorization": f"Bearer {key}"},
-                              json=payload, timeout=600)
+                              json=payload, stream=True, timeout=(30, 120))
             r.raise_for_status()
-            data = r.json()
-            text = data["choices"][0]["message"]["content"].strip()
+            parts, usage, started = [], {}, time.time()
+            for line in r.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data:"):
+                    continue
+                data_str = line[5:].strip()
+                if data_str == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_str)
+                except ValueError:
+                    continue
+                if chunk.get("usage"):
+                    usage = chunk["usage"]
+                delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+                if delta.get("content"):
+                    parts.append(delta["content"])
+            text = "".join(parts).strip()
             if text:
-                usage = data.get("usage", {})
-                log(f"редактор ответил: {len(text)} символов, токены: {usage.get('total_tokens', '?')}")
+                log(f"редактор ответил: {len(text)} символов за {int(time.time() - started)} с, "
+                    f"токены: {usage.get('total_tokens', '?')}")
                 return text
+            last_err = RuntimeError("пустой ответ")
         except Exception as e:
             last_err = e
-            log(f"попытка {attempt + 1} не удалась: {e}")
-            time.sleep(15 * (attempt + 1))
+            wait = 60 * (attempt + 1) if "429" in str(e) else 20 * (attempt + 1)
+            log(f"попытка {attempt + 1} не удалась: {e}; пауза {wait} с")
+            time.sleep(wait)
     raise RuntimeError(f"редактор не ответил: {last_err}")
 
 
