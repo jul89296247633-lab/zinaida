@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Утренний дайджест</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 17mm 22mm 17mm;
+    @bottom-center {
+      content: "Утренний дайджест · {{DATE}} · Юлия Рогачёва · продажи · управление · AI";
+      font-family: "DejaVu Sans", sans-serif;
+      font-size: 7.5pt;
+      color: #9a938a;
+      letter-spacing: 0.08em;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "DejaVu Serif", Georgia, serif;
+    font-size: 10pt;
+    line-height: 1.52;
+    color: #23201c;
+    margin: 0;
+  }
+
+  /* ── шапка ── */
+  .masthead {
+    border-bottom: 2.5pt solid #23201c;
+    padding-bottom: 6pt;
+    margin-bottom: 4pt;
+  }
+  .masthead .over {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 7.5pt;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    color: #8a6d3b;
+    margin-bottom: 5pt;
+  }
+  .masthead h1 {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 21pt;
+    font-weight: 300;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin: 0;
+    color: #23201c;
+  }
+  .dateline {
+    display: flex;
+    justify-content: space-between;
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 8.5pt;
+    color: #6f675e;
+    padding-top: 5pt;
+    letter-spacing: 0.06em;
+  }
+  .dateline .rule { color: #b5502f; }
+
+  /* ── секции ── */
+  h2 {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 13pt;
+    font-weight: 600;
+    border-bottom: 1.2pt solid #23201c;
+    padding-bottom: 3pt;
+    margin: 0 0 10pt 0;
+    break-before: page;
+    break-after: avoid;
+  }
+  h2:first-of-type { break-before: auto; margin-top: 14pt; }
+
+  h3 {
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 10.5pt;
+    font-weight: 700;
+    line-height: 1.35;
+    margin: 13pt 0 4pt 0;
+    break-after: avoid;
+  }
+  h3::before {
+    content: "▪";
+    color: #b5502f;
+    margin-right: 5pt;
+  }
+
+  p { margin: 0 0 6pt 0; text-align: justify; }
+
+  em { color: #6f675e; font-size: 8.5pt; }
+
+  blockquote {
+    margin: 7pt 0 11pt 0;
+    padding: 7pt 10pt;
+    background: #f6f3ec;
+    border-left: 2.5pt solid #b5502f;
+    break-inside: avoid;
+  }
+  blockquote p {
+    margin: 0;
+    font-family: "DejaVu Sans", sans-serif;
+    font-size: 9pt;
+    line-height: 1.45;
+    color: #3d372f;
+    text-align: left;
+  }
+  blockquote strong { color: #8a3d20; letter-spacing: 0.04em; }
+
+  ol, ul { margin: 4pt 0 8pt 0; padding-left: 16pt; }
+  li { margin-bottom: 3pt; }
+
+  a { color: #23201c; text-decoration: none; }
+
+  hr { border: none; border-top: 0.7pt solid #d8d2c6; margin: 10pt 0; }
+</style>
+</head>
+<body>
+  <div class="masthead">
+    <div class="over">Утренний дайджест · Юлия Рогачёва · Четвёртый Форс</div>
+    <h1>Материал на сегодня</h1>
+    <div class="dateline">
+      <span>{{WEEKDAY}} · {{DATE}}</span>
+      <span class="rule">AI · Модели · Маркетплейсы · SMM · GitHub</span>
+    </div>
+  </div>
+  {{BODY}}
+</body>
+</html>

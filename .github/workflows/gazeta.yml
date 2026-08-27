@@ -1,0 +1,59 @@
+name: Зинаида — газета
+
+on:
+  schedule:
+    # 03:23 UTC = 06:23 МСК: выпуск приходит к ~07:00 МСК.
+    # Минута сдвинута с ровного часа: старт часа — пик нагрузки GitHub, запуски отбрасываются.
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: zinaida-gazeta
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gazeta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Системные библиотеки для WeasyPrint
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 shared-mime-info fonts-dejavu >/dev/null
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Зависимости
+        run: pip install -q feedparser pyyaml requests markdown weasyprint
+
+      - name: Собрать выпуск
+        env:
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          ZAI_BASE_URL: ${{ secrets.ZAI_BASE_URL }}
+          ZAI_MODEL: ${{ secrets.ZAI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python gazeta/main.py
+
+      - name: Приложить PDF к запуску (для отладки)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: digest
+          path: |
+            digest-*.pdf
+            digest-preview.html
+          if-no-files-found: ignore
+          retention-days: 7
