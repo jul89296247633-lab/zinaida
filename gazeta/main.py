@@ -31,8 +31,8 @@ CAP_PER_FEED = 10         # максимум статей на ленту в с�
 CAP_GITHUB = 12           # сколько trending-репозиторий брать
 EXCERPT = 340             # аннотация в сырьё, символов
 
-ZAI_BASE = os.environ.get("ZAI_BASE_URL", "https://api.z.ai/api/paas/v4")
-ZAI_MODEL = os.environ.get("ZAI_MODEL", "glm-5.3")
+ZAI_BASE = os.environ.get("ZAI_BASE_URL") or "https://api.z.ai/api/paas/v4"
+ZAI_MODEL = os.environ.get("ZAI_MODEL") or "glm-5.3"
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("TELEGRAM_CHAT_ID", "")
 
