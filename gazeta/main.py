@@ -32,7 +32,9 @@ CAP_GITHUB = 12           # сколько trending-репозиторий бр�
 EXCERPT = 340             # аннотация в сырьё, символов
 
 ZAI_BASE = os.environ.get("ZAI_BASE_URL") or "https://api.z.ai/api/paas/v4"
-ZAI_MODEL = os.environ.get("ZAI_MODEL") or "glm-5.3"
+# glm-5.x думает по 15+ минут и съедает лимит на рассуждениях; 4.7 с выключенным
+# мышлением пишет сразу — проверено боевым судьёй дрилла в salesvoice (glm.ts).
+ZAI_MODEL = os.environ.get("ZAI_MODEL") or "glm-4.7"
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("TELEGRAM_CHAT_ID", "")
 
@@ -181,11 +183,12 @@ def call_editor(material_text, today_label):
             {"role": "user", "content": user},
         ],
         "temperature": 0.6,
-        # GLM-5 — думающая модель: reasoning идёт перед контентом и ест
-        # max_tokens, поэтому запас обязателен (см. salesvoice glm.ts).
-        "max_tokens": 16000,
+        "max_tokens": 12000,
         "stream": True,
     }
+    if ZAI_MODEL.startswith("glm-4"):
+        # гибридные 4.x: мышление выключается полностью (у 5.x нельзя)
+        payload["thinking"] = {"type": "disabled"}
     last_err = None
     for attempt in range(3):
         try:
