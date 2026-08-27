@@ -181,7 +181,9 @@ def call_editor(material_text, today_label):
             {"role": "user", "content": user},
         ],
         "temperature": 0.6,
-        "max_tokens": 10000,
+        # GLM-5 — думающая модель: reasoning идёт перед контентом и ест
+        # max_tokens, поэтому запас обязателен (см. salesvoice glm.ts).
+        "max_tokens": 16000,
         "stream": True,
     }
     last_err = None
@@ -190,7 +192,8 @@ def call_editor(material_text, today_label):
             r = requests.post(url, headers={"Authorization": f"Bearer {key}"},
                               json=payload, stream=True, timeout=(30, 120))
             r.raise_for_status()
-            parts, usage, started = [], {}, time.time()
+            parts, reasoning, usage = [], [], {}
+            started, last_note = time.time(), 0.0
             for line in r.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data:"):
                     continue
@@ -204,14 +207,24 @@ def call_editor(material_text, today_label):
                 if chunk.get("usage"):
                     usage = chunk["usage"]
                 delta = (chunk.get("choices") or [{}])[0].get("delta") or {}
+                if delta.get("reasoning_content"):
+                    reasoning.append(delta["reasoning_content"])
                 if delta.get("content"):
                     parts.append(delta["content"])
+                if time.time() - last_note > 60:
+                    log(f"…пишет: контент {sum(map(len, parts))} симв, "
+                        f"размышления {sum(map(len, reasoning))} симв")
+                    last_note = time.time()
             text = "".join(parts).strip()
             if text:
                 log(f"редактор ответил: {len(text)} символов за {int(time.time() - started)} с, "
+                    f"размышлений {sum(map(len, reasoning))} симв, "
                     f"токены: {usage.get('total_tokens', '?')}")
                 return text
-            last_err = RuntimeError("пустой ответ")
+            joined = "".join(reasoning).strip()
+            last_err = RuntimeError(
+                f"контент пуст; размышлений {len(joined)} симв — вероятно, исчерпан max_tokens"
+                if joined else "пустой ответ без размышлений")
         except Exception as e:
             last_err = e
             wait = 60 * (attempt + 1) if "429" in str(e) else 20 * (attempt + 1)
