@@ -262,6 +262,117 @@ def section_titles(md_text):
             if line.startswith("## ")]
 
 
+# ── идеи контента → контент-завод (интеграция, 2026-09-05) ─────────────────
+# Секции 01–04 дайджеста содержат «> **ИДЕЯ КОНТЕНТА.** …» — вынимаем их
+# вместе с заголовком/сутью/источником и POST-им в /api/ideas/ingest завода.
+# Ошибки доставки НЕ роняют выпуск (теле-газета важнее): try/except + лог.
+
+IDEA_SECTIONS = ("01", "02", "03", "04")   # тренды/модели/маркетплейсы/SMM
+IDEA_SOURCE_ENV = os.environ.get("IDEAS_API_URL", "")
+IDEA_SECRET_ENV = os.environ.get("IDEAS_INGEST_SECRET", "")
+
+
+def iso_week(now):
+    y, w, _ = now.isocalendar()
+    return f"{y}-W{w:02d}"
+
+
+def extract_ideas(md_text, material):
+    """Материалы секций 01–04 с блоком «ИДЕЯ КОНТЕНТА» → [{title, summary, url}]."""
+    # FIFO-очереди ссылок по имени ленты (запасной url, если GLM не дал ссылку)
+    feed_queues = {name: [it["url"] for it in items if it.get("url")]
+                   for name, items in material.items()}
+
+    items = []
+    section = None
+    cur = None
+
+    def flush():
+        nonlocal cur
+        if not cur:
+            return
+        idea = cur.get("idea")
+        if not idea:
+            cur = None
+            return
+        summary = " ".join(cur.get("body", [])).strip()
+        if summary:
+            summary = summary[:500]
+        summary = (f"Суть: {summary} → Идея: {idea[:500]}").strip()
+        url = cur.get("url")
+        if not url:
+            # запасной путь: первая неиспользованная ссылка названной ленты
+            src = (cur.get("source") or "").lower()
+            for name, queue in list(feed_queues.items()):
+                if name.lower() in src and queue:
+                    url = queue.pop(0)
+                    break
+        items.append({"title": cur["title"][:300], "summary": summary, "url": url})
+        cur = None
+
+    for line in md_text.splitlines():
+        h2 = re.match(r"^##\s+(\d\d)\s*·", line)
+        if h2:
+            flush()
+            section = h2.group(1)
+            continue
+        if line.startswith("## "):
+            flush()
+            section = None
+            continue
+        h3 = line.startswith("### ")
+        if h3:
+            flush()
+            if section in IDEA_SECTIONS:
+                cur = {"title": re.sub(r"^###\s*", "", line).strip(),
+                       "body": [], "idea": None, "source": None, "url": None}
+            continue
+        if not cur:
+            continue
+        m_src = re.match(r"^\*Источник:\s*(.+?)\*?\s*$", line.strip())
+        if m_src:
+            cur["source"] = m_src.group(1).strip()
+            m_url = re.search(r"https?://\S+", m_src.group(1))
+            if m_url:
+                cur["url"] = m_url.group(0).rstrip(").,;*")
+            continue
+        m_idea = re.match(r"^>\s*\*\*ИДЕЯ КОНТЕНТА\.?\*\*\s*(.+)$", line.strip())
+        if m_idea:
+            cur["idea"] = m_idea.group(1).strip()
+            continue
+        if line.strip() and not line.strip().startswith(">"):
+            cur["body"].append(line.strip())
+    flush()
+    return items
+
+
+def push_ideas(now, md_text, material):
+    """Собирает идеи из md дайджеста и POST-ит в завод. Ошибки не бросает."""
+    if not (IDEA_SOURCE_ENV and IDEA_SECRET_ENV):
+        log("идеи: env IDEAS_API_URL/IDEAS_INGEST_SECRET не заданы — пропуск")
+        return
+    try:
+        ideas = extract_ideas(md_text, material)
+        if not ideas:
+            log("идеи: материалов с ИДЕЕЙ КОНТЕНТА нет — ничего не отправляем")
+            return
+        r = requests.post(
+            IDEA_SOURCE_ENV,
+            headers={"Authorization": f"Bearer {IDEA_SECRET_ENV}"},
+            json={"week": iso_week(now), "source": "trends_weekly", "items": ideas},
+            timeout=30,
+        )
+        data = r.json() if r.headers.get("content-type", "").startswith("application/json") else {}
+        if r.ok and data.get("ok"):
+            log(f"идеи: отправлено {len(ideas)}, записано {data.get('inserted')}, "
+                f"дублей {data.get('skipped')}")
+        else:
+            log(f"идеи: завод ответил {r.status_code}: {str(data)[:200]}")
+    except Exception as e:
+        log(f"идеи: не отправлены ({e}) — выпуск не пострадал")
+
+
+
 # ── доставка ──────────────────────────────────────────────────────────────
 
 def tg_api(method, **fields):
@@ -305,6 +416,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--no-pdf", action="store_true")
     ap.add_argument("--no-telegram", action="store_true")
+    ap.add_argument("--no-ingest", action="store_true",
+                    help="не отправлять идеи в контент-завод (отладка)")
     args = ap.parse_args()
 
     now = dt.datetime.now(MSK)
@@ -320,6 +433,10 @@ def main():
 
     md = call_editor(raw_text(material), f"{weekday}, {date_label}")
     md = re.sub(r"^```markdown\s*|\s*```$", "", md.strip())
+
+    # Идеи контента → контент-завод (ошибки не роняют выпуск)
+    if not args.no_ingest:
+        push_ideas(now, md, material)
 
     titles = section_titles(md)
     body_html = markdown_to_html(md)

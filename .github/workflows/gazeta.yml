@@ -45,6 +45,8 @@ jobs:
           ZAI_MODEL: ${{ secrets.ZAI_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          IDEAS_API_URL: ${{ secrets.IDEAS_API_URL }}
+          IDEAS_INGEST_SECRET: ${{ secrets.IDEAS_INGEST_SECRET }}
         run: python gazeta/main.py
 
       - name: Приложить PDF к запуску (для отладки)
