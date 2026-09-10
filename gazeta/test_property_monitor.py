@@ -64,6 +64,21 @@ class PropertyTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 pm.run(dry_run=True)
 
+    def test_invalid_editor_card_does_not_block_valid_card(self):
+        from unittest.mock import MagicMock
+        invalid = dict(self.card, facts='Цена 999 рублей.')
+        answer = json.dumps({'cards': [invalid, self.card]})
+        response = MagicMock()
+        response.__enter__.return_value = iter([
+            ('data: ' + json.dumps({'choices': [{'delta': {'content': answer}}]}) + '\n').encode(),
+            b'data: [DONE]\n'])
+        with patch.dict(pm.os.environ, {'ZAI_API_KEY': 'test-only'}), \
+                patch.object(pm, 'urlopen', return_value=response):
+            cards = pm.select_cards([self.record])
+        self.assertEqual(len(cards), 1)
+        self.assertEqual(cards[0]['facts'], self.card['facts'])
+        self.assertTrue(self.record['review_failed'])
+
 
 if __name__ == '__main__':
     unittest.main()

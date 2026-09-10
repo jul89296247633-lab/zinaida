@@ -188,7 +188,20 @@ def select_cards(records):
     cards = data.get('cards')
     if not isinstance(cards, list) or len(cards) > 8:
         raise ValueError('invalid card list')
-    return [validate_card(card, records) for card in cards]
+    valid = []
+    for card in cards:
+        try:
+            valid.append(validate_card(card, records))
+        except (ValueError, TypeError, AttributeError) as exc:
+            # A rejected card must not block delivery of independently grounded cards.
+            # Only our fixed validation reasons are logged, never model output.
+            reason = str(exc) if isinstance(exc, ValueError) else 'invalid card shape'
+            print('PROPERTY_CARD_REJECTED', reason, flush=True)
+            index = card.get('source_id') if isinstance(card, dict) else None
+            affected = [records[index]] if type(index) is int and 0 <= index < len(records) else records
+            for record in affected:
+                record['review_failed'] = True
+    return valid
 
 
 def validate_card(card, records):
@@ -282,7 +295,7 @@ def run(dry_run=False, collect_only=False):
             save_state(old)  # Retry only remaining cards after partial delivery.
     if not dry_run:
         for r in records:
-            if r['url'] not in deferred_urls:
+            if r['url'] not in deferred_urls and not r.get('review_failed'):
                 old['pages'][r['url']] = {'hash': r['hash'], 'text': r['text']}
         save_state(old)
     print('PROPERTY_DONE', len(pending), flush=True)
