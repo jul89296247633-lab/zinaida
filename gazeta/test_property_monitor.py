@@ -13,6 +13,7 @@ class PropertyTests(unittest.TestCase):
                        'text': 'Старт продаж у озера. Цена 7 100 000 рублей.',
                        'hash': 'current', 'kind': 'page', 'previous_text': ''}
         self.card = {'source_id': 0, 'title': 'ЖК <Озеро>', 'category': 'ЖК',
+                     'price_rub': 7_100_000, 'price_evidence': 'Цена 7 100 000 рублей.',
                      'facts': 'Цена 7 100 000 рублей.', 'assessment': 'Интересен вид.',
                      'checks': 'Проверить этаж.', 'evidence': 'Старт продаж у озера.'}
 
@@ -23,6 +24,22 @@ class PropertyTests(unittest.TestCase):
                         {'facts': 'Цена 999 рублей.'}, {'checks': 'https://evil.example'}]:
             with self.subTest(changed=changed), self.assertRaises(ValueError):
                 pm.validate_card(dict(self.card, **changed), [self.record])
+
+    def test_budget_limits(self):
+        for category, price, accepted in [
+            ('ЖК', 3_000_000, True), ('ЖК', 10_000_000, True),
+            ('ЖК', 2_999_999, False), ('ЖК', 10_000_001, False),
+            ('Земля', 5_000_000, True), ('Земля', 5_000_001, False),
+            ('Земля', 0, False), ('ЖК', None, False)]:
+            record = dict(self.record, text=f'Старт продаж у озера. Цена {price} рублей.')
+            card = dict(self.card, category=category, price_rub=price,
+                        price_evidence=f'Цена {price} рублей.', facts=f'Цена {price} рублей.')
+            with self.subTest(category=category, price=price):
+                if accepted:
+                    pm.validate_card(card, [record])
+                else:
+                    with self.assertRaises(ValueError):
+                        pm.validate_card(card, [record])
 
     def test_parser_skips_script_and_keeps_lot_price_order(self):
         text, links = pm.page_text('<script>secret()</script><h1>Лот 1</h1>'
