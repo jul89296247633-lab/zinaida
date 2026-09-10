@@ -1,0 +1,23 @@
+{
+  "regions": ["Москва", "Московская область", "Санкт-Петербург", "Ленинградская область"],
+  "pages": [
+    {"name": "Донстрой: новые проекты", "url": "https://donstroy.moscow/", "discover": "/objects/|/press/news/"},
+    {"name": "Донстрой: новости", "url": "https://donstroy.moscow/press/news/", "discover": "/press/news/"},
+    {"name": "Река, Москва", "url": "https://donstroy.moscow/objects/reka/"},
+    {"name": "Остров, Москва", "url": "https://donstroy.moscow/objects/ostrov/"},
+    {"name": "Setl: новые проекты", "url": "https://setlgroup.ru/", "discover": "/projects/|/news/"},
+    {"name": "Сэтл Дворцовый, Санкт-Петербург", "url": "https://setlgroup.ru/projects/setl-palace"},
+    {"name": "Аристократ, Санкт-Петербург", "url": "https://setlgroup.ru/projects/aristokrat"},
+    {"name": "ФАКТ: участки Ленобласти", "url": "https://www.fakt-group.ru/", "discover": "/poselki/[^/]+/o-proekte/|/o-kompanii/novosti/[^/]+/"},
+    {"name": "Вуоксаари, Ленобласть", "url": "https://www.fakt-group.ru/poselki/vuoksaari/o-proekte/"},
+    {"name": "Отрадная бухта, Ленобласть", "url": "https://www.fakt-group.ru/poselki/otradnaya-bukhta-2-0/o-proekte/"},
+    {"name": "Павловы Озера, Подмосковье", "url": "https://www.pavlovy-ozera.ru/", "discover": "/genplan|/news|/blog"},
+    {"name": "Павловы Озера: четвертая очередь", "url": "https://www.pavlovy-ozera.ru/genplan-4/"}
+  ],
+  "searches": [
+    "(Москва OR Подмосковье OR Московская) (ЖК OR новостройка) (старт продаж OR новый корпус) (река OR парк OR видовые OR набережная) when:30d",
+    "(Петербург OR Ленинградская) (ЖК OR новостройка) (старт продаж OR новый корпус) (залив OR Нева OR видовые OR парк) when:30d",
+    "(Подмосковье OR Московская OR Истра OR Можайск) участки (у воды OR водохранилище OR первая линия) продажа when:30d",
+    "Ленинградская участки (озеро OR залив OR Вуокса) (старт продаж OR новые участки) when:30d"
+  ]
+}
