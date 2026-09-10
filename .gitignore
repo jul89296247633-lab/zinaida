@@ -1,0 +1,4 @@
+
+# Property monitor runtime state (Actions cache)
+.property-state/
+__pycache__/
