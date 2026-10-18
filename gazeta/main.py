@@ -101,7 +101,52 @@ def collect():
         if items:
             material[name] = items
             stats.append(f"{name}: {len(items)}")
+    hd = load_hd_summary()
+    if hd:
+        material["hd.borboza — задачи дня"] = hd
+        stats.append("hd.borboza: сводка")
     return material, stats
+
+
+# ── задачи hd.borboza (сводка за день, собирается gazeta/hd_tasks.py) ───────
+# Сводка — отдельный прогон ДО газеты; здесь только читаем готовый файл.
+# Ошибки и отсутствие файла не роняют выпуск: секция 09 просто пропускается.
+
+HD_SUMMARY_MD = os.path.join(REPO, "hd-summary.md")
+HD_SUMMARY_JSON = os.path.join(REPO, "hd-summary.json")
+
+
+def load_hd_summary():
+    """Markdown-сводка задач → материал для секции 09 (или None)."""
+    try:
+        with open(HD_SUMMARY_MD, encoding="utf8") as f:
+            text = f.read().strip()
+    except OSError:
+        return None
+    if not text:
+        return None
+    return [{"title": line.strip("· ").strip(), "url": "", "date": "", "summary": ""}
+            for line in text.splitlines() if line.strip()]
+
+
+def send_hd_data_message():
+    """Компактное данные-сообщение после PDF: числа дня из json-сводки."""
+    import json as json_mod
+    try:
+        with open(HD_SUMMARY_JSON, encoding="utf8") as f:
+            s = json_mod.load(f)
+        text = (f"<b>hd.borboza · задачи за {s['date']}</b>\n"
+                f"новые: {len(s['opened'])} · закрыты: {len(s['closed'])} · "
+                f"веток с движением: {len(s['touched'])}")
+        if s.get("topics_touched"):
+            top = sorted(s["topics_touched"].items(), key=lambda x: -x[1])[:5]
+            text += "\nтемы: " + ", ".join(f"{k} {v}" for k, v in top)
+        if s.get("approvals") or s.get("denies"):
+            text += f"\nсогласований: {len(s.get('approvals', []))} · отказов: {len(s.get('denies', []))}"
+        tg_api("sendMessage", chat_id=TG_CHAT, text=text[:1000], parse_mode="HTML")
+        log("данные-сообщение по задачам отправлено")
+    except Exception as e:
+        log(f"данные-сообщение по задачам не отправлено ({e}) — выпуск не пострадал")
 
 
 def raw_text(material):
@@ -162,6 +207,9 @@ SYSTEM = """Ты — редактор личного утреннего дайд
 
 ## 08 · Для себя
 Короткий личный блок НЕ для контента: забота о себе, тело, пауза, режим. 3–4 предложения, тёплый тон, без морализаторства.
+
+## 09 · Задачи hd.borboza за день
+Печатается ТОЛЬКО если в сырье есть лента «hd.borboza — задачи дня». Формат: 1 абзац — числа (новые/закрытые/открытые, темы дня), затем 2–4 строки о согласованиях и отказах с номерами задач (#цифры) как в сырье. Никаких советов и оценки — только факты из сырья. Если ленты в сырье нет — секцию пропустить.
 
 ПРАВИЛА: суммарно 7–9 страниц текста не нужно — пиши плотно, каждый материал по делу. Не добавляй секции, которых нет в структуре. Не пиши вводных «сегодня в выпуске». Первый токен ответа — сразу `## 01`."""
 
@@ -456,6 +504,7 @@ def main():
         cover += "\n".join(f"· {html_mod.escape(t)}" for t in titles)
         cover += "\n\nГазета в файле выше ⚆"
         send_digest(pdf_path, cover)
+        send_hd_data_message()
 
     log("готово")
 

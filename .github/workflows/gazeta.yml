@@ -36,7 +36,17 @@ jobs:
           python-version: "3.12"
 
       - name: Зависимости
-        run: pip install -q feedparser pyyaml requests markdown weasyprint
+        run: |
+          pip install -q feedparser pyyaml requests markdown weasyprint playwright
+          python -m playwright install --with-deps chromium >/dev/null
+
+      - name: Собрать сводку задач hd.borboza (не роняет выпуск)
+        env:
+          BORBOZA_LOGIN: ${{ secrets.BORBOZA_LOGIN }}
+          BORBOZA_PASSWORD: ${{ secrets.BORBOZA_PASSWORD }}
+        continue-on-error: true
+        timeout-minutes: 8
+        run: python gazeta/hd_tasks.py
 
       - name: Собрать выпуск
         env:
@@ -57,5 +67,7 @@ jobs:
           path: |
             digest-*.pdf
             digest-preview.html
+            hd-summary.json
+            hd-summary.md
           if-no-files-found: ignore
           retention-days: 7

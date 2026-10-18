@@ -2,3 +2,7 @@
 # Property monitor runtime state (Actions cache)
 .property-state/
 __pycache__/
+
+# hd.borboza daily summary artifacts
+hd-summary.json
+hd-summary.md
