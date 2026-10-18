@@ -1,0 +1,23 @@
+{
+  "comment": "База сопоставимых офлайн-размещений из истории согласований hd.borboza.com (2025-2026). price — за period (мес/нед/разово/год). Пополняется вручную по закрытым задачам; агент сверяет новые заявки с ней и задаёт вопросы, если дороже других регионов.",
+  "deals": [
+    {"task": 714975, "type": "аудио ТЦ", "city": "Красноярск", "object": "КомсоМОЛЛ", "price": 7500, "period": "мес", "okhvat": 300000, "approved": true, "note": "30 сек, 2-3 р/час"},
+    {"task": 714975, "type": "аудио ТЦ", "city": "Красноярск", "object": "ТЦ Свободный", "price": 8000, "period": "мес", "okhvat": null, "approved": true, "note": "15 сек"},
+    {"task": 714975, "type": "аудио ТЦ", "city": "Красноярск", "object": "Квант", "price": 7500, "period": "мес", "okhvat": 300000, "approved": true},
+    {"task": 714975, "type": "аудио ТЦ", "city": "Красноярск", "object": "Взлетка-Плаза", "price": 6500, "period": "мес", "okhvat": 150000, "approved": true},
+    {"task": 710497, "type": "аудио ТЦ", "city": "Барнаул", "object": "ТЦ Галактика", "price": 18000, "period": "мес", "okhvat": null, "approved": true, "note": "1 раз в 30 мин; июль-август, третий ТЦ бесплатно"},
+    {"task": 710497, "type": "аудио ТЦ", "city": "Бийск", "object": "ТЦ Ривьера", "price": 13000, "period": "мес", "okhvat": null, "approved": true, "note": "1 раз в 15 мин"},
+    {"task": 718305, "type": "аудио ТЦ", "city": "Красноярск", "object": "ТРЦ Моремолл (промопакет)", "price": 60000, "period": "мес", "okhvat": null, "approved": true, "note": "аудио 2 р/час 30 сек + стикер в лифт + промолокация"},
+    {"task": 679687, "type": "радио", "city": "Тольятти", "object": "Люди FM, 10 станций", "price": 56952, "period": "мес", "okhvat": null, "approved": true},
+    {"task": 733480, "type": "радио", "city": "Набережные Челны", "object": "4 станции (ХИТ ФМ и др.)", "price": 39106, "period": "разово", "okhvat": null, "approved": true, "note": "бартер товаром"},
+    {"task": 632768, "type": "радио", "city": "Красноярск", "object": "3 станции, 95-110 выходов", "price": 71470, "period": "разово", "okhvat": null, "approved": true, "note": "бартер, ролик 35 сек"},
+    {"task": 675803, "type": "радио", "city": "не указан", "object": "битва офисов", "price": 60000, "period": "2 нед", "okhvat": null, "approved": false, "note": "НЕ согласовано; ТВ прогноз погоды 25000/нед тоже"},
+    {"task": 695951, "type": "радио+ТВ", "city": "не указан", "object": "Трансмит + Канал12, битва офисов", "price": 150000, "period": "2 мес", "okhvat": null, "approved": true},
+    {"task": 664390, "type": "ТВ", "city": "не указан", "object": "Точка зрения 15 мин + сюжет", "price": 31000, "period": "разово", "okhvat": null, "approved": null},
+    {"task": 733529, "type": "наружка", "city": "не указан", "object": "баннер на стеллу у ТЦ Тополь", "price": 26640, "period": "разово", "okhvat": null, "approved": false, "note": "изготовление+монтаж+автовышка, размещение бесплатное бессрочно; НЕ согласовано"},
+    {"task": 689995, "type": "наружка", "city": "не указан", "object": "вывеска на ТЦ + навигация + реклама над Перекрестком", "price": 20000, "period": "мес", "okhvat": null, "approved": true},
+    {"task": 727294, "type": "мероприятие", "city": "Саратов", "object": "ForteFest осень", "price": 12500, "period": "разово", "okhvat": 1500, "approved": true},
+    {"task": 727297, "type": "мероприятие", "city": "Саратов", "object": "Nutricionica ДР", "price": 10000, "period": "разово", "okhvat": 500, "approved": true},
+    {"task": 659627, "type": "пресса/авиа", "city": "не указан", "object": "журнал Utair, 4-я обложка", "price": 550000, "period": "год", "okhvat": null, "approved": true}
+  ]
+}
