@@ -218,9 +218,10 @@ def collect(username, password, day_from):
             raise RuntimeError("вход в hd.borboza.com не состоялся")
         log("вход выполнен")
         for p in range(1, PAGES + 1):
-            if p > 1:
-                page.goto(f"{BASE}?p={p}", wait_until="domcontentloaded", timeout=60000)
-                page.wait_for_timeout(PAUSE * 1000)
+            # первую страницу перезагружаем: страница сразу после входа может
+            # ещё не содержать список задач (наблюдалось на раннере Actions)
+            page.goto(f"{BASE}?p={p}", wait_until="domcontentloaded", timeout=60000)
+            page.wait_for_timeout(PAUSE * 1000)
             tasks = page.evaluate(EXTRACT_JS)
             data.extend(tasks)
             log(f"стр.{p}: задач {len(tasks)}")
