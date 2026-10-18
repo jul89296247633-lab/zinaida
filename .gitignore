@@ -9,3 +9,8 @@ hd-summary.md
 
 # агент ответов: история предложенных черновиков (кэш Actions)
 .hd-answer-state/
+
+# сводка компании за день (артефакты прогона)
+company-summary.json
+company-summary.md
+hd-candidates-now.txt

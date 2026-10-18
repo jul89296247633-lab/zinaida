@@ -48,6 +48,16 @@ jobs:
         timeout-minutes: 8
         run: python gazeta/hd_tasks.py
 
+      - name: Сводка компании за день (не роняет выпуск)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python gazeta/company_day.py --send
+
       - name: Собрать выпуск
         env:
           ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
