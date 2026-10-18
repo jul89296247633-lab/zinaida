@@ -37,7 +37,7 @@ jobs:
 
       - name: Зависимости
         run: |
-          pip install -q feedparser pyyaml requests markdown weasyprint playwright
+          pip install -q feedparser pyyaml requests markdown weasyprint playwright beautifulsoup4
           python -m playwright install --with-deps chromium >/dev/null
 
       - name: Собрать сводку задач hd.borboza (не роняет выпуск)
@@ -52,10 +52,12 @@ jobs:
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          BORBOZA_LOGIN: ${{ secrets.BORBOZA_LOGIN }}
+          BORBOZA_PASSWORD: ${{ secrets.BORBOZA_PASSWORD }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         continue-on-error: true
-        timeout-minutes: 5
+        timeout-minutes: 10
         run: python gazeta/company_day.py --send
 
       - name: Собрать выпуск

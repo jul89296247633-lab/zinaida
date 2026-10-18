@@ -33,6 +33,152 @@ SB_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 TG_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TG_CHAT = os.environ.get("TELEGRAM_CHAT_ID", "")
 
+# ── выручка дня: orders.borboza display-mix-sells (даты в URL) ──────────────
+# Полный набор параметров обязателен: без lastMonthSelect/exactMonth/location
+# портал молча отдаёт нули. Числа в тыс. руб.; строка «Город (N)» несёт итог
+# города, вложенные строки — точки (не суммировать вместе с итогом).
+MIX_URL = "https://orders.borboza.com/stat/global-sale-points/display-mix-sells/"
+MIX_PARAMS = "lastMonthSelect=0&exactMonth=-1&location=allRegions&displayData=displayData"
+CITY_ROW_RX = re.compile(r"^(.+?)\s+\((\d+)\)$")
+
+
+def fetch_days_money(dates):
+    """Выручка по дням одной сессией: {iso: {города, маркетплейсы, дилеры}}}.
+    Один вход на все даты (регламент: <=2 попытки за прогон), паузы >=3 с."""
+    import importlib.util
+    import time
+
+    spec = importlib.util.spec_from_file_location("hd_tasks", Path(__file__).resolve().parent / "hd_tasks.py")
+    hd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hd)
+
+    def parse(html):
+        from bs4 import BeautifulSoup
+
+        soup = BeautifulSoup(html, "html.parser")
+        tables = soup.select("table")
+        if len(tables) < 2:
+            return None
+        rows = tables[1].select("tr")
+        cities, marketplaces, dealers = {}, 0.0, 0.0
+        section = "дилеры"
+
+        def num(cell):
+            text = re.sub(r"[\s ]", "", cell.get_text(" ") or "")
+            if re.fullmatch(r"-?[\d.,]+", text):
+                return float(text.replace(",", "."))
+            return None
+
+        for row in rows:
+            cells = row.find_all(["th", "td"], recursive=False)
+            if len(cells) < 2:
+                continue
+            label = re.sub(r"\s+", " ", cells[0].get_text(" ")).strip()
+            value = num(cells[1])
+            if not label or value is None:
+                continue
+            m = CITY_ROW_RX.match(label)
+            if m:
+                city = m.group(1).strip()
+                cities[city] = cities.get(city, 0.0) + value
+                section = "city"
+                continue
+            low = label.lower()
+            if section == "дилеры" and low.startswith("итого от дилеров"):
+                dealers = value
+                section = "маркетплейсы"
+            elif section == "маркетплейсы":
+                if low.startswith("итого"):
+                    section = "cities"
+                elif low.startswith("маркетплейс"):
+                    marketplaces += value
+        if not cities and not marketplaces:
+            return None
+        return {"cities": cities, "marketplaces": marketplaces, "dealers": dealers}
+
+    out = {}
+    pw, browser = hd.launch()
+    try:
+        ctx = browser.new_context(viewport={"width": 1680, "height": 1050})
+        page = ctx.new_page()
+        first_url = f"{MIX_URL}?from={dates[0]}&to={dates[0]}&{MIX_PARAMS}"
+        page.goto(first_url, wait_until="domcontentloaded", timeout=90000)
+        page.wait_for_timeout(4000)
+        if not hd.logged_in(page):
+            ok = False
+            for _attempt in (1, 2):
+                if hd.login(page, ctx, os.environ["BORBOZA_LOGIN"], os.environ["BORBOZA_PASSWORD"]):
+                    ok = True
+                    break
+                time.sleep(20)
+            if not ok:
+                return out
+        for iso in dates:
+            url = f"{MIX_URL}?from={iso}&to={iso}&{MIX_PARAMS}"
+            page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            page.wait_for_timeout(3500)
+            for _ in range(20):
+                if page.locator("table").count() > 1:
+                    break
+                page.wait_for_timeout(3000)
+            out[iso] = parse(page.content())
+            page.wait_for_timeout(500)
+    finally:
+        browser.close()
+        pw.stop()
+    return out
+
+
+def money_block(d1, d2, d8, label2, label8):
+    """Выручка за вчера против позавчера и того же дня недели (тыс. руб)."""
+    if not (os.environ.get("BORBOZA_LOGIN") and os.environ.get("BORBOZA_PASSWORD")):
+        return None
+    try:
+        days = fetch_days_money([d1.isoformat(), d2.isoformat(), d8.isoformat()])
+        m1 = days.get(d1.isoformat())
+        if m1 is None:
+            return None
+        m2 = days.get(d2.isoformat())
+        m8 = days.get(d8.isoformat())
+    except Exception as e:
+        log(f"выручка дня недоступна: {e}")
+        return None
+
+    def tot(m):
+        return (sum(m["cities"].values()) + m["marketplaces"]) if m else None
+
+    t1, t2, t8 = tot(m1), tot(m2), tot(m8)
+    lines = [f"Выручка за {d1.strftime('%d.%m')}: {fmt(t1)} тыс ₽"]
+    if t2:
+        d = t1 - t2
+        lines[0] += f" · {d:+,.0f} к {label2} ({pct(t1, t2):+.1f}%)".replace(",", " ")
+    if t8:
+        d = t1 - t8
+        lines[0] += f" · {d:+,.0f} к {label8} ({pct(t1, t8):+.1f}%)".replace(",", " ")
+    top = sorted(m1["cities"].items(), key=lambda kv: -kv[1])[:4]
+    if top:
+        lines.append("· регионы: " + " · ".join(f"{c} {fmt(v)}" for c, v in top))
+    lines.append(f"· маркетплейсы: {fmt(m1['marketplaces'])} тыс ₽")
+    flags = []
+    if m2:
+        for city, v in m1["cities"].items():
+            base = m2["cities"].get(city, 0.0)
+            if base >= 100:
+                dp = (v - base) / base * 100
+                if dp >= 25:
+                    flags.append(f"↑ {city} +{dp:.0f}%")
+                elif dp <= -25:
+                    flags.append(f"↓ {city} {dp:.0f}%")
+    if m8:
+        for city, v in m1["cities"].items():
+            base = m8["cities"].get(city, 0.0)
+            dp = (v - base) / base * 100 if base else 0
+            if base >= 100 and abs(dp) >= 40 and not any(city in f for f in flags):
+                flags.append(f"{'↑' if dp > 0 else '↓'} {city} к {label8} {dp:+.0f}%")
+    if flags:
+        lines.append("· отклонения: " + " · ".join(flags[:5]))
+    return "\n".join(lines)
+
 WEEKDAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
 
 
@@ -204,15 +350,18 @@ def build(day):
     if d1 is None:
         return None, "нет свежего среза сотрудников — сводка пропущена"
     people, warn = people_block(d1, d2, d8, d1_iso, d2_iso, d8_iso)
+    money = money_block(day, day - dt.timedelta(days=1), day - dt.timedelta(days=7), d2_iso, d8_iso)
     weekly = weekly_block()
     parts = [f"Компания за {day.strftime('%d.%m.%Y')} ({WEEKDAYS[day.weekday()]})"]
+    if money:
+        parts.append(money)
     if people:
         parts.append(people)
     if weekly:
         parts.append(weekly)
     if warn:
         parts.append(f"внимание: {warn}")
-    parts.append("источник: employee_snapshots (день)" + (", weekly_facts (неделя)" if weekly else ""))
+    parts.append("источник: display-mix-sells (выручка), employee_snapshots (люди)" + (", weekly_facts (неделя)" if weekly else ""))
     return "\n".join(parts), None
 
 
