@@ -129,6 +129,155 @@ def fetch_days_money(dates):
     return out
 
 
+# ── товарные группы: orders.borboza regions-line (шт, лаг отгрузок ~1 день) ──
+GOODS_URL = "https://orders.borboza.com/stat/global-sale-points-goods/regions-line/"
+# подгруппа бренда — ТОЧНОЕ имя («Yamaguchi», «US Medica Линейка SPA»);
+# «Косметика Yamaguchi» — уже категория, не подгруппа
+BRAND_SUBGROUP_RX = re.compile(
+    r"^(yamaguchi|us medica|panasonic|fujiiryoki|anatomico|jet|x-line|"
+    r"axiom( 2 robotics)?|bestec|smart wall|hakuju)(\s+линейка.*)?$", re.I
+)
+
+
+def good_group(section):
+    s = (section or "").strip()
+    if BRAND_SUBGROUP_RX.match(s):
+        return None  # подгруппа бренда — категорию не меняет
+    s = s.lower()
+    if "кресл" in s or "соф" in s or "качалк" in s:
+        return "кресла"
+    if "массаж" in s or "стол" in s and "массаж" in s or "стул" in s and "массаж" in s:
+        if "кресл" in s:
+            return "кресла"
+        return "массаж"
+    if any(k in s for k in ("дорожк", "тренаж", "фитнес", "велосипед", "спорт", "миостимулятор", "палк", "степпер", "виброплатформ", "эллипт")):
+        return "фитнес"
+    if any(k in s for k in ("косметолог", "косметик", "маски для лица", "красот", "фен", "прибор для лица")):
+        return "бьюти"
+    return "прочее"
+
+
+def fetch_goods_groups(dates):
+    """Шт по группам {дата: {группа: шт}} одной сессией regions-line."""
+    import importlib.util
+    import time
+
+    spec = importlib.util.spec_from_file_location("hd_tasks", Path(__file__).resolve().parent / "hd_tasks.py")
+    hd = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(hd)
+
+    def parse(html):
+        from bs4 import BeautifulSoup
+
+        soup = BeautifulSoup(html, "html.parser")
+        tables = soup.select("table")
+        if len(tables) < 2:
+            return None
+        groups = defaultdict(float)
+        section = ""
+
+        def num(text):
+            t = re.sub(r"[\s ]", "", text or "")
+            return float(t.replace(",", ".")) if re.fullmatch(r"-?[\d.,]+", t) else None
+
+        for row in tables[1].select("tr"):
+            cells = row.find_all(["th", "td"], recursive=False)
+            vals = [c.get_text(" ").strip() for c in cells]
+            if not vals or not vals[0]:
+                continue
+            if vals[0].isdigit():
+                # строка товара: категорию задаёт последняя не-брендовая секция
+                g = good_group(section)
+                if g:
+                    for v in vals[2:]:
+                        n = num(v)
+                        if n is not None:
+                            groups[g] += n
+            elif vals[0] not in ("#",):
+                if good_group(vals[0]) is not None:
+                    section = vals[0]
+        return dict(groups) or None
+
+    out = {}
+    pw, browser = hd.launch()
+    try:
+        ctx = browser.new_context(viewport={"width": 1680, "height": 1050})
+        page = ctx.new_page()
+        first = f"{GOODS_URL}?from={dates[0]}&to={dates[0]}&{MIX_PARAMS}"
+        page.goto(first, wait_until="domcontentloaded", timeout=90000)
+        page.wait_for_timeout(4000)
+        if not hd.logged_in(page):
+            ok = False
+            for _attempt in (1, 2):
+                if hd.login(page, ctx, os.environ["BORBOZA_LOGIN"], os.environ["BORBOZA_PASSWORD"]):
+                    ok = True
+                    break
+                time.sleep(20)
+            if not ok:
+                return out
+        for iso in dates:
+            url = f"{GOODS_URL}?from={iso}&to={iso}&{MIX_PARAMS}"
+            page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            # ждём данные: ненулевая ячейка вне колонок #/Товар (загрузка асинхронная)
+            for _ in range(30):
+                ready = page.evaluate(
+                    """() => {
+                      const t = [...document.querySelectorAll('table')][1];
+                      if (!t) return false;
+                      for (const tr of t.querySelectorAll('tr')) {
+                        const tds = tr.querySelectorAll('td');
+                        for (let i = 2; i < tds.length; i++) {
+                          const v = (tds[i].innerText || '').replace(/[\s,]/g, '');
+                          if (/^\d+$/.test(v) && parseInt(v, 10) > 0) return true;
+                        }
+                      }
+                      return false;
+                    }"""
+                )
+                if ready:
+                    break
+                page.wait_for_timeout(3000)
+            out[iso] = parse(page.content())
+            page.wait_for_timeout(1500)
+    finally:
+        browser.close()
+        pw.stop()
+    return out
+
+
+def goods_block(d2, d3, d9, label3, label9):
+    """Товарные группы за последний полный день (шт) с дельтами."""
+    if not (os.environ.get("BORBOZA_LOGIN") and os.environ.get("BORBOZA_PASSWORD")):
+        return None
+    try:
+        days = fetch_goods_groups([d2.isoformat(), d3.isoformat(), d9.isoformat()])
+        g2 = days.get(d2.isoformat())
+        if not g2:
+            return None
+        g3 = days.get(d3.isoformat()) or {}
+        g9 = days.get(d9.isoformat()) or {}
+    except Exception as e:
+        log(f"товарные группы недоступны: {e}")
+        return None
+    order = ("бьюти", "кресла", "массаж", "фитнес", "прочее")
+    parts = []
+    for key in order:
+        if key not in g2:
+            continue
+        v = g2[key]
+        d_day = v - g3.get(key, 0.0)
+        d_week = v - g9.get(key, 0.0)
+        parts.append(f"{key} {v:+.0f} ({d_day:+.0f}/{d_week:+.0f})")
+    if not parts:
+        return None
+    lines = [
+        f"Товары за {d2.strftime('%d.%m')} (шт; в скобках Δ к {label3} и к {label9}): "
+        + " · ".join(parts),
+    ]
+    lines.append("· по отгрузкам, данные доходят с лагом ~1 день")
+    return "\n".join(lines)
+
+
 def money_block(d1, d2, d8, label2, label8):
     """Выручка за вчера против позавчера и того же дня недели (тыс. руб)."""
     if not (os.environ.get("BORBOZA_LOGIN") and os.environ.get("BORBOZA_PASSWORD")):
@@ -351,17 +500,20 @@ def build(day):
         return None, "нет свежего среза сотрудников — сводка пропущена"
     people, warn = people_block(d1, d2, d8, d1_iso, d2_iso, d8_iso)
     money = money_block(day, day - dt.timedelta(days=1), day - dt.timedelta(days=7), d2_iso, d8_iso)
+    goods = goods_block(day - dt.timedelta(days=1), day - dt.timedelta(days=2), day - dt.timedelta(days=8), (day - dt.timedelta(days=2)).isoformat(), (day - dt.timedelta(days=8)).isoformat())
     weekly = weekly_block()
     parts = [f"Компания за {day.strftime('%d.%m.%Y')} ({WEEKDAYS[day.weekday()]})"]
     if money:
         parts.append(money)
+    if goods:
+        parts.append(goods)
     if people:
         parts.append(people)
     if weekly:
         parts.append(weekly)
     if warn:
         parts.append(f"внимание: {warn}")
-    parts.append("источник: display-mix-sells (выручка), employee_snapshots (люди)" + (", weekly_facts (неделя)" if weekly else ""))
+    parts.append("источник: display-mix-sells (выручка), regions-line (товары), employee_snapshots (люди)" + (", weekly_facts (неделя)" if weekly else ""))
     return "\n".join(parts), None
 
 
