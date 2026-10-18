@@ -1,0 +1,60 @@
+name: Зинаида — агент ответов на задачи
+
+on:
+  schedule:
+    # ежечасно 08:43–21:43 МСК (рабочие часы, минута сдвинута с пика часа);
+    # ночью задачи почти не создаются — гонять логин в портал незачем
+    - cron: "43 5-18 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: zinaida-hd-answers
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  answers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Зависимости
+        run: |
+          pip install -q playwright requests
+          python -m playwright install --with-deps chromium >/dev/null
+
+      - name: Восстановить историю предложенных ответов
+        id: state
+        uses: actions/cache/restore@v4
+        with:
+          path: .hd-answer-state
+          key: hd-answer-state-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: hd-answer-state-v1-
+
+      - name: Найти задачи и предложить ответы
+        env:
+          BORBOZA_LOGIN: ${{ secrets.BORBOZA_LOGIN }}
+          BORBOZA_PASSWORD: ${{ secrets.BORBOZA_PASSWORD }}
+          ZAI_API_KEY: ${{ secrets.ZAI_API_KEY }}
+          ZAI_BASE_URL: ${{ secrets.ZAI_BASE_URL }}
+          ZAI_MODEL: ${{ secrets.ZAI_MODEL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python gazeta/hd_answers.py
+
+      - name: Сохранить историю (включая частично обработанный прогон)
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .hd-answer-state
+          key: hd-answer-state-v1-${{ github.run_id }}-${{ github.run_attempt }}

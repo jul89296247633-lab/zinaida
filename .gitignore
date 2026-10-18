@@ -6,3 +6,6 @@ __pycache__/
 # hd.borboza daily summary artifacts
 hd-summary.json
 hd-summary.md
+
+# агент ответов: история предложенных черновиков (кэш Actions)
+.hd-answer-state/
