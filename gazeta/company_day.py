@@ -97,9 +97,8 @@ def fetch_days_money(dates):
         return {"cities": cities, "marketplaces": marketplaces, "dealers": dealers}
 
     out = {}
-    pw, browser = hd.launch()
+    pw, ctx, close = hd.launch()
     try:
-        ctx = browser.new_context(viewport={"width": 1680, "height": 1050})
         page = ctx.new_page()
         first_url = f"{MIX_URL}?from={dates[0]}&to={dates[0]}&{MIX_PARAMS}"
         page.goto(first_url, wait_until="domcontentloaded", timeout=90000)
@@ -124,8 +123,7 @@ def fetch_days_money(dates):
             out[iso] = parse(page.content())
             page.wait_for_timeout(500)
     finally:
-        browser.close()
-        pw.stop()
+        close()
     return out
 
 
@@ -199,9 +197,8 @@ def fetch_goods_groups(dates):
         return dict(groups) or None
 
     out = {}
-    pw, browser = hd.launch()
+    pw, ctx, close = hd.launch()
     try:
-        ctx = browser.new_context(viewport={"width": 1680, "height": 1050})
         page = ctx.new_page()
         first = f"{GOODS_URL}?from={dates[0]}&to={dates[0]}&{MIX_PARAMS}"
         page.goto(first, wait_until="domcontentloaded", timeout=90000)
@@ -240,8 +237,7 @@ def fetch_goods_groups(dates):
             out[iso] = parse(page.content())
             page.wait_for_timeout(1500)
     finally:
-        browser.close()
-        pw.stop()
+        close()
     return out
 
 

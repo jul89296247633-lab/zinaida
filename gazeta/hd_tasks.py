@@ -132,14 +132,40 @@ EXTRACT_JS = """() => {
 
 
 def launch():
+    """(pw, ctx, close): контекст браузера под готовые страницы.
+
+    Локально на машине Юлии — Яндекс-Браузер с изолированным профилем
+    (правило «сбор через Яндекс-Браузер»: HD_BROWSER_PATH + HD_PROFILE_DIR,
+    без турбо/VPN). На Actions — обычный chromium (HD_CHROMIUM_PATH — обход
+    отсутствия нужной версии в кэше).
+    """
     from playwright.sync_api import sync_playwright
 
     pw = sync_playwright().start()
-    # локальный обход: свежий playwright просит браузер, которого нет в кэше;
-    # переменной можно указать полный путь к chrome.exe (на Actions не нужна)
-    exe = os.environ.get("HD_CHROMIUM_PATH") or None
-    browser = pw.chromium.launch(headless=True, executable_path=exe, args=["--no-sandbox"])
-    return pw, browser
+    exe = os.environ.get("HD_BROWSER_PATH") or os.environ.get("HD_CHROMIUM_PATH") or None
+    profile = os.environ.get("HD_PROFILE_DIR") or ""
+    args = ["--no-sandbox", "--no-first-run", "--no-default-browser-check"]
+    if profile:
+        ctx = pw.chromium.launch_persistent_context(
+            profile,
+            executable_path=exe,
+            headless=True,
+            viewport={"width": 1680, "height": 1050},
+            args=args,
+        )
+
+        def close():
+            ctx.close()
+            pw.stop()
+
+        return pw, ctx, close
+    browser = pw.chromium.launch(headless=True, executable_path=exe, args=args)
+
+    def close():
+        browser.close()
+        pw.stop()
+
+    return pw, browser.new_context(viewport={"width": 1680, "height": 1050}), close
 
 
 def first_visible(page, selector):
@@ -207,10 +233,9 @@ def login(page, ctx, username, password):
 
 
 def collect(username, password, day_from):
-    pw, browser = launch()
+    pw, ctx, close = launch()
     data = []
     try:
-        ctx = browser.new_context(viewport={"width": 1680, "height": 1050})
         page = ctx.new_page()
         page.goto(BASE, wait_until="domcontentloaded", timeout=90000)
         page.wait_for_timeout(PAUSE * 1000)
@@ -231,8 +256,7 @@ def collect(username, password, day_from):
             if last and all((parse_dt(x) or day_from) < day_from for x in last):
                 break
     finally:
-        browser.close()
-        pw.stop()
+        close()
     return data
 
 

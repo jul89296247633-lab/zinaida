@@ -14,3 +14,6 @@ hd-summary.md
 company-summary.json
 company-summary.md
 hd-candidates-now.txt
+
+# локальный сборщик: worktree ветки hd-inbox (артефакт машины)
+.hd-inbox-worktree/

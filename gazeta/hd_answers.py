@@ -35,6 +35,12 @@ TG_CHAT = hd_tasks.TG_CHAT
 # копия черновиков помощнице (TELEGRAM_ASSISTANT_CHAT_ID; пусто — не дублируем)
 TG_ASSISTANT = os.environ.get("TELEGRAM_ASSISTANT_CHAT_ID", "")
 
+# Inbox локального сборщика: когда порталы Борбозы не отвечают раннерам GitHub,
+# задачи собирает машина Юлии (Яндекс-Браузер) и кладёт в ветку hd-inbox
+# (gazeta/hd_collect_local.py). Пусто/протухло — агент ходит на портал сам.
+HD_INBOX_API = os.environ.get("HD_INBOX_API", "")
+INBOX_STALE_H = 3
+
 ZAI_BASE = os.environ.get("ZAI_BASE_URL") or "https://api.z.ai/api/paas/v4"
 ZAI_MODEL = os.environ.get("ZAI_MODEL") or "glm-4.7"
 
@@ -338,6 +344,34 @@ def send_draft(task, answer, ad_block=None):
     r.raise_for_status()
 
 
+def load_inbox(now):
+    """Задачи из ветки hd-inbox (локальный сборщик) или None, если нет/протухло."""
+    import base64
+    import urllib.request
+
+    if not HD_INBOX_API:
+        return None
+    headers = {"Accept": "application/vnd.github+json"}
+    gh_token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if gh_token:
+        headers["Authorization"] = f"Bearer {gh_token}"
+    try:
+        req = urllib.request.Request(HD_INBOX_API, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            meta = json.loads(r.read().decode())
+        data = json.loads(base64.b64decode(meta["content"]).decode("utf8"))
+    except Exception as e:
+        log(f"inbox недоступен ({e}) — пробуем портал напрямую")
+        return None
+    collected = dt.datetime.fromisoformat(data.get("collected_at", ""))
+    if (now - collected).total_seconds() > data.get("stale_after_h", INBOX_STALE_H) * 3600:
+        log(f"inbox от {collected:%H:%M} протух — пробуем портал напрямую")
+        return None
+    tasks = data.get("tasks") or []
+    log(f"inbox от {collected:%d.%m %H:%M}: задач {len(tasks)}")
+    return tasks
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true", help="без GLM и Telegram: показать кандидатов")
@@ -353,7 +387,9 @@ def main():
         print("нет BORBOZA_LOGIN/BORBOZA_PASSWORD — агент пропущен", flush=True)
         return 0
 
-    tasks = hd_tasks.collect(username, password, now - dt.timedelta(hours=FRESH_H))
+    tasks = load_inbox(now)
+    if tasks is None:
+        tasks = hd_tasks.collect(username, password, now - dt.timedelta(hours=FRESH_H))
     cand = candidates(tasks, now, state["suggested"])
     log(f"задач прочитано {len(tasks)}, ждут ответа: {len(cand)}")
     if args.dry_run or not cand:
