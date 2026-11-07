@@ -22,6 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import company_day  # noqa: E402  (выручка/товары в тот же snapshot)
 import hd_tasks  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -100,6 +101,17 @@ def main():
     tasks = hd_tasks.collect(username, password, now - dt.timedelta(hours=72))
     log(f"задач собрано: {len(tasks)}")
 
+    # выручка и товары в тот же снимок: утренняя газета (06:23 МСК) читает
+    # его вместо портала — комп может быть выключен, вчерашний день уже собран
+    day = (now - dt.timedelta(days=1)).date()
+    money = company_day.fetch_days_money(
+        [day.isoformat(), (day - dt.timedelta(days=1)).isoformat(), (day - dt.timedelta(days=7)).isoformat()]
+    )
+    goods = company_day.fetch_goods_groups(
+        [(day - dt.timedelta(days=1)).isoformat(), (day - dt.timedelta(days=2)).isoformat(), (day - dt.timedelta(days=8)).isoformat()]
+    )
+    log(f"выручка: {len(money)} дат · товары: {len(goods)} дат")
+
     prepare_worktree()
     out = WORKTREE / INBOX_DIR
     out.mkdir(parents=True, exist_ok=True)
@@ -107,6 +119,8 @@ def main():
         "collected_at": now.isoformat(),
         "stale_after_h": STALE_H,
         "tasks": tasks,
+        "money": money,
+        "goods": goods,
     }
     (out / "latest.json").write_text(json.dumps(payload, ensure_ascii=False), encoding="utf8")
 

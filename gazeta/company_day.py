@@ -42,6 +42,28 @@ MIX_PARAMS = "lastMonthSelect=0&exactMonth=-1&location=allRegions&displayData=di
 CITY_ROW_RX = re.compile(r"^(.+?)\s+\((\d+)\)$")
 
 
+def load_inbox_data():
+    """Снимок локального сборщика (задачи+выручка+товары) или None."""
+    import base64
+    import urllib.request
+
+    api = os.environ.get("HD_INBOX_API", "")
+    if not api:
+        return None
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        req = urllib.request.Request(api, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            meta = json.loads(r.read().decode())
+        return json.loads(base64.b64decode(meta["content"]).decode("utf8"))
+    except Exception as e:
+        log(f"inbox недоступен ({e})")
+        return None
+
+
 def fetch_days_money(dates):
     """Выручка по дням одной сессией: {iso: {города, маркетплейсы, дилеры}}}.
     Один вход на все даты (регламент: <=2 попытки за прогон), паузы >=3 с."""
@@ -245,8 +267,17 @@ def goods_block(d2, d3, d9, label3, label9):
     """Товарные группы за последний полный день (шт) с дельтами."""
     if not (os.environ.get("BORBOZA_LOGIN") and os.environ.get("BORBOZA_PASSWORD")):
         return None
+    days = {}
+    inbox = load_inbox_data()
+    if inbox and inbox.get("goods"):
+        days = {k: v for k, v in inbox["goods"].items() if v}
+        log(f"товары из inbox от {inbox.get('collected_at', '?')[:16]}")
+    if not days.get(d2.isoformat()):
+        try:
+            days.update(fetch_goods_groups([d2.isoformat(), d3.isoformat(), d9.isoformat()]) or {})
+        except Exception as e:
+            log(f"товары с портала недоступны: {e}")
     try:
-        days = fetch_goods_groups([d2.isoformat(), d3.isoformat(), d9.isoformat()])
         g2 = days.get(d2.isoformat())
         if not g2:
             return None
@@ -278,8 +309,17 @@ def money_block(d1, d2, d8, label2, label8):
     """Выручка за вчера против позавчера и того же дня недели (тыс. руб)."""
     if not (os.environ.get("BORBOZA_LOGIN") and os.environ.get("BORBOZA_PASSWORD")):
         return None
+    days = {}
+    inbox = load_inbox_data()
+    if inbox and inbox.get("money"):
+        days = {k: v for k, v in inbox["money"].items() if v}
+        log(f"выручка из inbox от {inbox.get('collected_at', '?')[:16]}")
+    if not days.get(d1.isoformat()):
+        try:
+            days.update(fetch_days_money([d1.isoformat(), d2.isoformat(), d8.isoformat()]) or {})
+        except Exception as e:
+            log(f"выручка с портала недоступна: {e}")
     try:
-        days = fetch_days_money([d1.isoformat(), d2.isoformat(), d8.isoformat()])
         m1 = days.get(d1.isoformat())
         if m1 is None:
             return None

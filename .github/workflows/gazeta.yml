@@ -44,6 +44,8 @@ jobs:
         env:
           BORBOZA_LOGIN: ${{ secrets.BORBOZA_LOGIN }}
           BORBOZA_PASSWORD: ${{ secrets.BORBOZA_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          HD_INBOX_API: https://api.github.com/repos/jul89296247633-lab/zinaida/contents/hd-inbox/latest.json?ref=hd-inbox
         continue-on-error: true
         timeout-minutes: 8
         run: python gazeta/hd_tasks.py
@@ -54,6 +56,8 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           BORBOZA_LOGIN: ${{ secrets.BORBOZA_LOGIN }}
           BORBOZA_PASSWORD: ${{ secrets.BORBOZA_PASSWORD }}
+          GH_TOKEN: ${{ github.token }}
+          HD_INBOX_API: https://api.github.com/repos/jul89296247633-lab/zinaida/contents/hd-inbox/latest.json?ref=hd-inbox
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         continue-on-error: true

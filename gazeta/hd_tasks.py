@@ -353,6 +353,39 @@ def send(text):
     log("сводка отправлена в Telegram")
 
 
+def load_inbox_tasks(now, max_age_h=20):
+    """Задачи из снимка локального сборщика (ветка hd-inbox).
+
+    Для утренней газеты хватает вечернего снимка: он закрывает «за вчера»
+    целиком, поэтому порог протухания мягче, чем у часового агента.
+    """
+    import base64
+    import urllib.request
+
+    api = os.environ.get("HD_INBOX_API", "")
+    if not api:
+        return None
+    headers = {"Accept": "application/vnd.github+json"}
+    token = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    try:
+        req = urllib.request.Request(api, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            meta = json.loads(r.read().decode())
+        data = json.loads(base64.b64decode(meta["content"]).decode("utf8"))
+    except Exception as e:
+        log(f"inbox недоступен ({e}) — пробуем портал")
+        return None
+    collected = dt.datetime.fromisoformat(data.get("collected_at", ""))
+    if (now - collected).total_seconds() > max_age_h * 3600:
+        log(f"inbox от {collected:%d.%m %H:%M} старше {max_age_h} ч — пробуем портал")
+        return None
+    tasks = data.get("tasks") or []
+    log(f"inbox от {collected:%d.%m %H:%M}: задач {len(tasks)}")
+    return tasks
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--send", action="store_true", help="отправить сводку в Telegram")
@@ -369,7 +402,9 @@ def main():
     day_to = now.replace(hour=0, minute=0, second=0, microsecond=0)
     day_from = day_to - dt.timedelta(days=args.days_back)
 
-    tasks = collect(username, password, day_from)
+    tasks = load_inbox_tasks(now)
+    if tasks is None:
+        tasks = collect(username, password, day_from)
     s = build_summary(tasks, day_from, day_to)
     SUMMARY.write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf8")
     md = summary_md(s)
