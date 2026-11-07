@@ -11,25 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
+      - uses: actions/checkout@v4
       - name: Отправить проверочное сообщение во все чаты
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           TELEGRAM_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_ASSISTANT_CHAT_ID }}
-        run: python - <<'EOF'
-import os
-import urllib.request
-
-token = os.environ["TELEGRAM_BOT_TOKEN"]
-chats = [c for c in {os.environ.get("TELEGRAM_CHAT_ID", ""), os.environ.get("TELEGRAM_ASSISTANT_CHAT_ID", "")} if c]
-for chat in chats:
-    data = (
-        f"chat_id={chat}&text=Тест доставки Зинаиды: канал подключён. "
-        "Черновики ответов по задачам будут приходить сюда копией."
-    ).encode()
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{token}/sendMessage?{data.decode()}"
-    )
-    with urllib.request.urlopen(req, timeout=30) as r:
-        print(chat, "->", r.status)
-EOF
+        run: python gazeta/tg_check.py
