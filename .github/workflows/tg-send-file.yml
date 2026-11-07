@@ -1,0 +1,32 @@
+name: Зинаида — отправить файл в чаты
+
+on:
+  workflow_dispatch:
+    inputs:
+      file_path:
+        description: 'Путь к файлу в репозитории'
+        required: true
+        type: string
+      caption:
+        description: 'Подпись к файлу'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Отправить документ
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_ASSISTANT_CHAT_ID }}
+          TG_FILE_PATH: ${{ inputs.file_path }}
+          TG_CAPTION: ${{ inputs.caption }}
+        run: python gazeta/tg_send_file.py
