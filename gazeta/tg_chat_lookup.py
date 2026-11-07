@@ -27,7 +27,7 @@ def call(method):
 
 
 me = call("getMe")
-print(f"бот: @{me.get('username')} ({me.get('first_name', '')})", flush=True)
+print(f"бот: {json.dumps(me, ensure_ascii=False)}", flush=True)
 
 try:
     updates = call("getUpdates?allowed_updates=%5B%22message%22%2C%22channel_post%22%5D")
