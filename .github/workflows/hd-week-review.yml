@@ -1,0 +1,30 @@
+name: Зинаида — обзор задач за неделю
+
+on:
+  schedule:
+    # 03:40 UTC понедельника = 06:40 МСК: локальный сборщик (06:00) успевает
+    # подготовить обзор, этот воркфлоу только отправляет его в Telegram.
+    - cron: '40 3 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: zinaida-hd-week
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Отправить обзор в Telegram
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HD_WEEK_API: https://api.github.com/repos/jul89296247633-lab/zinaida/contents/hd-inbox/week-review.json?ref=hd-inbox
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_ASSISTANT_CHAT_ID }}
+        run: python gazeta/hd_week_send.py
