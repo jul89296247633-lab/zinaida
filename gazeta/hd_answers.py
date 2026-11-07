@@ -32,6 +32,8 @@ MAX_PER_RUN = int(os.environ.get("HD_ANSWER_MAX", "4"))
 MAX_MSG_CHARS = 900       # сообщение ветки — сколько брать в промпт
 TG_TOKEN = hd_tasks.TG_TOKEN
 TG_CHAT = hd_tasks.TG_CHAT
+# копия черновиков помощнице (TELEGRAM_ASSISTANT_CHAT_ID; пусто — не дублируем)
+TG_ASSISTANT = os.environ.get("TELEGRAM_ASSISTANT_CHAT_ID", "")
 
 ZAI_BASE = os.environ.get("ZAI_BASE_URL") or "https://api.z.ai/api/paas/v4"
 ZAI_MODEL = os.environ.get("ZAI_MODEL") or "glm-4.7"

@@ -50,6 +50,7 @@ jobs:
           ZAI_MODEL: ${{ secrets.ZAI_MODEL }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TELEGRAM_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_ASSISTANT_CHAT_ID }}
         run: python gazeta/hd_answers.py
 
       - name: Сохранить историю (включая частично обработанный прогон)
