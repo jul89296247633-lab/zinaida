@@ -21,10 +21,8 @@ if not TOKEN:
 
 
 def call(method):
-    req = urllib.request.Request(
-        f"https://api.telegram.org/bot{TOKEN}/{method}", timeout=30
-    )
-    with urllib.request.urlopen(req) as r:
+    req = urllib.request.Request(f"https://api.telegram.org/bot{TOKEN}/{method}")
+    with urllib.request.urlopen(req, timeout=30) as r:
         return json.loads(r.read().decode())
 
 
