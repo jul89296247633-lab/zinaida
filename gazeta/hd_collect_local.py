@@ -70,7 +70,22 @@ def _remote_exists():
         return False
 
 
+def load_env_fallback():
+    """Креды Борбозы из collector/.env, если их нет в окружении (планировщик)."""
+    if os.environ.get("BORBOZA_LOGIN"):
+        return
+    env_path = Path("C:/Users/user/Desktop/id-tools/collector/.env")
+    if not env_path.exists():
+        return
+    for line in env_path.read_text(encoding="utf8", errors="replace").splitlines():
+        line = line.strip()
+        if "=" in line and not line.startswith("#"):
+            k, v = line.split("=", 1)
+            os.environ.setdefault(k.strip(), v.strip())
+
+
 def main():
+    load_env_fallback()
     now = dt.datetime.now(hd_tasks.MSK)
     if now.hour < 7 or now.hour >= 22:
         log(f"{now:%H:%M} вне рабочих часов — пропуск")
