@@ -53,7 +53,6 @@ jobs:
           TELEGRAM_ASSISTANT_CHAT_ID: ${{ secrets.TELEGRAM_ASSISTANT_CHAT_ID }}
           GH_TOKEN: ${{ github.token }}
           HD_INBOX_API: https://api.github.com/repos/jul89296247633-lab/zinaida/contents/hd-inbox/latest.json?ref=hd-inbox
-        env_sqrt: unused
         run: python gazeta/hd_answers.py
 
       - name: Сохранить историю (включая частично обработанный прогон)
